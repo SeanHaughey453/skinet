@@ -1,6 +1,7 @@
 
 using API.Dtos;
 using API.Errors;
+using API.Helpers;
 using AutoMapper;
 using Core.Entities;
 using Core.Interfaces;
@@ -33,14 +34,22 @@ namespace API.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IReadOnlyList<ProductToReturnDto>>> GetProducts()//what we will be returning is an IReadOnlyList<ProductToReturnDto>> not just a ProductToReturnDto or an iread only list
-        {
-            var spec = new ProductsWithTypesAndBrandsSpecification();
+        public async Task<ActionResult<Pagination<ProductToReturnDto>>> GetProducts(
+           [FromQuery] ProductSpecParams productParams)//what we will be returning is an IReadOnlyList<ProductToReturnDto>> not just a ProductToReturnDto or an iread only list
+        {//use of the [FromQuery] to prevent a 415 unsuported when passing through the productParams because it is an object it will start to look at the body of the request and because get products is a http get we will receive a 415
+            var spec = new ProductsWithTypesAndBrandsSpecification(productParams);
+
+            var countSpec = new ProductWithFiltersForCountSpecification(productParams);
+
+            var totalItems = await _productsRepo.CountAsync(countSpec);
 
             var products = await  _productsRepo.ListAsync(spec);
 
-            return Ok(_mapper.Map<IReadOnlyList<Product>, 
-                    IReadOnlyList<ProductToReturnDto>>(products));//because we are returning from an IReadOnlyList of products and mapping to an IreadonlyList of ProductToReturnDto matching with the class type above
+            var data = _mapper.Map<IReadOnlyList<Product>, 
+                    IReadOnlyList<ProductToReturnDto>>(products);//because we are returning from an IReadOnlyList of products and mapping to an IreadonlyList of ProductToReturnDto matching with the class type above
+
+            return Ok(new Pagination<ProductToReturnDto>(productParams.PageIndex,
+                     productParams.PageSize, totalItems, data));
         }
 
         [HttpGet("{id}")]
