@@ -36,3 +36,4 @@ angular front end
 
 ssl certs pt 74
 
+to creat a component in angular it is 'ng generate component [name]'('ng g c [name]' for short)
